@@ -36,10 +36,11 @@
     
     "custom/power_profile":{
         //shows the current power profile and switches to next on click
-        "exec": "asusctl profile -p | sed s:'Active profile is'::",
+        "exec-if": "[ -x \"$HOME/.config/hypr/power-profile.sh\" ] && (command -v asusctl >/dev/null || command -v powerprofilesctl >/dev/null)",
+        "exec": "~/.config/hypr/power-profile.sh status",
         "interval": 300,
         "format": "󰈐{}", 
-        "on-click": "asusctl profile -n; pkill -SIGRTMIN+8 waybar",
+        "on-click": "~/.config/hypr/power-profile.sh cycle",
         "signal": 8
     },
 

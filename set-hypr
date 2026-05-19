@@ -10,7 +10,6 @@ set -u -o pipefail
 # Below is a list of the packages that would be installed
 #
 # hyprland: This is the Hyprland compositor
-# hyprmod: This is a native settings app for Hyprland
 # kitty: This is the default terminal
 # waybar: Waybar now has hyprland support
 # hyprpaper: This manages wallpapers for Hyprland
@@ -39,15 +38,20 @@ set -u -o pipefail
 # cliphist: clipboard history manager
 # playerctl: media player control CLI
 # brightnessctl: used to control monitor bright level
+# power-profiles-daemon: generic laptop power profile service and powerprofilesctl CLI
 # xdg-utils: desktop helpers like xdg-open
 # xdg-user-dirs: standard XDG user directories
 # xdg-user-dirs-gtk: GUI manager for standard user directories
 # qt5-wayland: Qt 5 Wayland support
 # qt6-wayland: Qt 6 Wayland support
+# mesa: userspace graphics stack for AMD/Intel GPUs
+# vulkan-radeon: Vulkan driver for AMD Radeon GPUs
+# libva-mesa-driver: VA-API video acceleration for Mesa drivers
 # gvfs: adds missing functionality to thunar such as automount usb drives
 # gvfs-mtp: MTP device support in Thunar
 # udisks2: removable drive backend
 # udiskie: automount tray helper
+# networkmanager: NetworkManager daemon used by nm-applet
 # network-manager-applet: tray applet and connection editor for NetworkManager
 # bluez: the bluetooth service
 # bluez-utils: command line utilities to interact with bluetooth devices
@@ -69,21 +73,25 @@ set -u -o pipefail
 # xdg-desktop-portal-hyprland: xdg-desktop-portal backend for hyprland
 
 PACKAGES=(
-    hyprland hyprmod kitty waybar
+    hyprland kitty waybar
     hyprpaper hyprlock hypridle hyprpolkitagent hyprsunset
     fuzzel hyprshutdown swaync thunar file-roller thunar-archive-plugin
     ttf-jetbrains-mono-nerd noto-fonts-emoji
     python-requests starship
     pipewire wireplumber pipewire-pulse
     satty grim slurp pavucontrol
-    wl-clipboard cliphist playerctl brightnessctl
+    wl-clipboard cliphist playerctl brightnessctl power-profiles-daemon
     xdg-utils xdg-user-dirs xdg-user-dirs-gtk qt5-wayland qt6-wayland
     gvfs gvfs-mtp udisks2 udiskie
-    network-manager-applet bluez bluez-utils blueman nwg-look
+    networkmanager network-manager-applet bluez bluez-utils blueman nwg-look
     unzip zip p7zip
     btop jq ripgrep fd fzf zoxide
     tumbler ffmpegthumbnailer
     dracula-gtk-theme dracula-icons-git xdg-desktop-portal-hyprland
+)
+
+AMD_RADEON_PACKAGES=(
+    mesa vulkan-radeon libva-mesa-driver
 )
 
 ROG_PACKAGES=(
@@ -96,6 +104,7 @@ CONFIG_DIRS=(
 
 EXECUTABLE_FILES=(
     "$HOME/.config/hypr/clipboard-menu.sh"
+    "$HOME/.config/hypr/power-profile.sh"
     "$HOME/.config/hypr/power-menu.sh"
     "$HOME/.config/waybar/scripts/waybar-wttr.py"
 )
@@ -337,6 +346,14 @@ fi
 if prompt_yes_no 'Would you like to install the packages? (y,n) '; then
     install_packages "Install desktop packages" "${PACKAGES[@]}"
 
+    if prompt_yes_no 'Would you like to install AMD Radeon packages? (y,n) '; then
+        install_packages "Install AMD Radeon packages" "${AMD_RADEON_PACKAGES[@]}"
+    else
+        append_unique SUMMARY_NOTES "Skipped AMD Radeon package installation"
+    fi
+
+    run_step "Enable NetworkManager service" sudo systemctl enable --now NetworkManager.service
+    run_step "Enable power-profiles-daemon service" sudo systemctl enable --now power-profiles-daemon.service
     run_step "Create XDG user directories" xdg-user-dirs-update
     run_step "Enable Bluetooth service" sudo systemctl enable --now bluetooth.service
     remove_packages_if_installed "Remove conflicting xdg portals" \
@@ -369,7 +386,6 @@ if prompt_yes_no 'Would you like to install Asus ROG software support? (y,n) '; 
     run_step "Ensure ASUS Linux pacman repository" ensure_g14_repo
     run_step "Refresh pacman repositories" sudo pacman -Syu --noconfirm
     install_packages "Install ASUS ROG packages" "${ROG_PACKAGES[@]}"
-    run_step "Enable power-profiles-daemon service" sudo systemctl enable --now power-profiles-daemon.service
     run_step "Enable supergfxd service" sudo systemctl enable --now supergfxd
 else
     append_unique SUMMARY_NOTES "Skipped ASUS ROG setup"

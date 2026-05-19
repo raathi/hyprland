@@ -9,7 +9,7 @@
   ```
 - The README also documents the manual package install path:
   ```bash
-  yay -S hyprland kitty waybar hyprmod \
+  yay -S hyprland kitty waybar \
       hyprpaper hyprlock hypridle hyprpolkitagent hyprsunset \
       fuzzel hyprshutdown swaync thunar file-roller thunar-archive-plugin \
       ttf-jetbrains-mono-nerd noto-fonts-emoji \
@@ -37,9 +37,8 @@
 ## High-level architecture
 
 - This repository is a deployable Hyprland desktop config bundle for Arch Linux. Top-level directories map directly to `~/.config` destinations (`hypr`, `kitty`, `satty`, `swaync`, `waybar`, `fuzzel`), and `starship.toml` is copied into `~/.config` as a standalone file.
-- `set-hypr` is the orchestration entrypoint. It updates packages with `yay`, optionally disables Wi-Fi powersave, installs the desktop dependencies including `hyprmod`, `hyprpaper`, `hyprlock`, `hypridle`, `hyprpolkitagent`, `hyprsunset`, `swaync`, and the shell utility bundle (`btop`, `jq`, `ripgrep`, `fd`, `fzf`, `zoxide`), copies config directories into `~/.config`, marks helper scripts executable, initializes XDG user directories, optionally enables Starship in `.bashrc`, optionally installs ASUS ROG support, and prints a final summary of installed, already-present, and failed packages plus failed setup steps.
-- `hypr/hyprland.lua` is the runtime hub for Hyprland 0.55+. It starts Hyprpaper, imports Wayland environment variables into systemd, restarts the packaged portal user services, launches `hyprpolkitagent`, starts `hyprsunset`, `udiskie`, `nm-applet --indicator`, `blueman-applet`, clipboard watchers, HyprIdle, `swaync`, and Waybar, sources `~/.config/hypr/hyprland-gui.conf` for HyprMod-managed settings via `hyprctl keyword source`, and defines the keybindings that tie together the rest of the repo (`kitty`, `thunar`, `fuzzel`, `hyprmod`, `hyprlock`, the Fuzzel-backed power menu, screenshots, audio, clipboard history, GTK theming, notifications, networking, Bluetooth, brightness, and ASUS-specific actions).
-- `hypr/hyprland-gui.conf` is the tracked stub for HyprMod. HyprMod writes its own managed settings there instead of editing the hand-maintained `hyprland.lua`.
+- `set-hypr` is the orchestration entrypoint. It updates packages with `yay`, optionally disables Wi-Fi powersave, installs the desktop dependencies including `hyprpaper`, `hyprlock`, `hypridle`, `hyprpolkitagent`, `hyprsunset`, `swaync`, and the shell utility bundle (`btop`, `jq`, `ripgrep`, `fd`, `fzf`, `zoxide`), copies config directories into `~/.config`, marks helper scripts executable, initializes XDG user directories, optionally enables Starship in `.bashrc`, optionally installs ASUS ROG support, and prints a final summary of installed, already-present, and failed packages plus failed setup steps.
+- `hypr/hyprland.lua` is the runtime hub for Hyprland 0.55+. It starts Hyprpaper, imports Wayland environment variables into systemd, restarts the packaged portal user services, launches `hyprpolkitagent`, starts `hyprsunset`, `udiskie`, `nm-applet --indicator`, `blueman-applet`, clipboard watchers, HyprIdle, `swaync`, and Waybar, and defines the keybindings that tie together the rest of the repo (`kitty`, `thunar`, `fuzzel`, `hyprlock`, the Fuzzel-backed power menu, screenshots, audio, clipboard history, GTK theming, notifications, networking, Bluetooth, brightness, and ASUS-specific actions).
 - `hypr/hyprpaper.conf` holds the wallpaper configuration for Hyprpaper and points at the tracked wallpaper image in the same config directory.
 - `hypr/hyprlock.conf` holds the lockscreen UI because Hyprlock looks for its config under the Hypr config directory rather than in a separate top-level folder.
 - `hypr/hypridle.conf` is the idle policy. It starts Hyprlock on lock events, turns displays off after a short idle period, and suspends later.
@@ -57,8 +56,7 @@
 ## Key conventions
 
 - Keep top-level repo names aligned with their final `~/.config` paths. `set-hypr` copies directories by name with `cp -R`, so renaming a directory or adding a new deployable config requires updating that script.
-- Preserve the path assumptions baked into runtime config. `hypr/hyprland.lua` expects `~/.config/hypr/hong-kong-night.jpg`, `~/.config/hypr/hyprland-gui.conf`, `~/.config/hypr/hyprpaper.conf`, `~/.config/hypr/hyprsunset.conf`, `~/.config/hypr/clipboard-menu.sh`, and `~/.config/hypr/power-menu.sh`; Hyprlock expects `~/.config/hypr/hyprlock.conf`; Hypridle expects `~/.config/hypr/hypridle.conf`; `waybar/config.jsonc` expects `~/.config/waybar/scripts/waybar-wttr.py`; `swaync` expects `~/.config/swaync/config.json`.
-- Keep HyprMod changes isolated to `hypr/hyprland-gui.conf`. Hand-maintained defaults and keybindings belong in `hypr/hyprland.lua`; GUI-managed overrides belong in the sourced file.
+- Preserve the path assumptions baked into runtime config. `hypr/hyprland.lua` expects `~/.config/hypr/hong-kong-night.jpg`, `~/.config/hypr/hyprpaper.conf`, `~/.config/hypr/hyprsunset.conf`, `~/.config/hypr/clipboard-menu.sh`, and `~/.config/hypr/power-menu.sh`; Hyprlock expects `~/.config/hypr/hyprlock.conf`; Hypridle expects `~/.config/hypr/hypridle.conf`; `waybar/config.jsonc` expects `~/.config/waybar/scripts/waybar-wttr.py`; `swaync` expects `~/.config/swaync/config.json`.
 - When editing Waybar, treat `config.jsonc`, `style.css`, and `waybar/scripts/waybar-wttr.py` as one feature area. Module names such as `custom/power_profile` and `pulseaudio#microphone` must stay in sync with the CSS selectors that style them.
 - Keep Waybar polling conservative. Expensive custom modules should refresh on slower intervals unless the UI really needs live updates; this repo intentionally keeps weather and power-profile polling relatively low-frequency.
 - ASUS ROG support is intentionally optional but wired in multiple places. `set-hypr` installs `asusctl`, `supergfxctl`, and `rog-control-center`; `hyprland.lua` binds ASUS hardware keys; and Waybar exposes the current power profile through `custom/power_profile`.

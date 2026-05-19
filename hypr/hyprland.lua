@@ -10,9 +10,6 @@ hl.monitor({
     scale = "auto",
 })
 
--- HyprMod still manages a hyprlang fragment, so source it after the Lua config loads.
-hl.exec_cmd("hyprctl keyword source ~/.config/hypr/hyprland-gui.conf")
-
 hl.on("hyprland.start", function()
     hl.exec_cmd("hyprpaper")
     hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
@@ -129,7 +126,6 @@ hl.bind(mainMod .. " + SHIFT + M", hl.dsp.exit())
 hl.bind(mainMod .. " + SHIFT + N", hl.dsp.exec_cmd("swaync-client -t -sw"))
 hl.bind(mainMod .. " + CTRL + N", hl.dsp.exec_cmd("swaync-client -d -sw"))
 hl.bind(mainMod .. " + E", hl.dsp.exec_cmd("thunar"))
-hl.bind(mainMod .. " + O", hl.dsp.exec_cmd("hyprmod"))
 hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mainMod .. " + W", hl.dsp.exec_cmd("nm-connection-editor"))
 hl.bind(mainMod .. " + SPACE", hl.dsp.exec_cmd("fuzzel"))
@@ -138,7 +134,7 @@ hl.bind(mainMod .. " + J", hl.dsp.layout("togglesplit"))
 hl.bind(mainMod .. " + S", hl.dsp.exec_cmd("grim -g \"$(slurp)\" - | satty --filename -"))
 
 hl.bind("code:156", hl.dsp.exec_cmd("rog-control-center"))
-hl.bind("code:211", hl.dsp.exec_cmd("asusctl profile -n; pkill -SIGRTMIN+8 waybar"))
+hl.bind("code:211", hl.dsp.exec_cmd("~/.config/hypr/power-profile.sh cycle"))
 hl.bind("code:121", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"))
 hl.bind("code:122", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"))
 hl.bind("code:123", hl.dsp.exec_cmd("wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+"))
