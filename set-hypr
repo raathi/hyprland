@@ -1,139 +1,383 @@
 #!/bin/bash
 
-# The follwoing will attempt to install all needed packages to run Hyprland
-# This is a quick and dirty script there are no error checking
-# This script is meant to run on a clean fresh system
+set -u -o pipefail
+
+# The following script attempts to install the packages and config needed to run
+# this Hyprland setup on a fresh Arch Linux system with yay already installed.
+# It now keeps going when optional steps fail and prints a final summary of what
+# was installed, what was already present, and what failed.
 #
 # Below is a list of the packages that would be installed
 #
 # hyprland: This is the Hyprland compositor
+# hyprmod: This is a native settings app for Hyprland
 # kitty: This is the default terminal
 # waybar: Waybar now has hyprland support
-# swaybg: This is used to set a desktop background image
-# swaylock-effects: This allows for the locking of the desktop its a fork that adds some editional visual effects
-# wofi: This is an application launcher menu
-# wlogout: This is a logout menu that allows for shutdown, reboot and sleep
-# mako: This is a graphical notification daemon
+# hyprpaper: This manages wallpapers for Hyprland
+# hyprlock: This locks the desktop using the Hyprland ecosystem locker
+# hypridle: This manages idle, screen-off, and suspend behavior for Hyprland
+# hyprpolkitagent: This handles polkit authentication dialogs in Hyprland
+# hyprsunset: This provides a night light / blue light filter for Hyprland
+# fuzzel: This is an application launcher menu
+# hyprshutdown: This gracefully closes apps and exits Hyprland
+# swaync: This is a notification daemon with a control center
 # thunar: This is a graphical file manager
-# ttf-jetbrains-mono-nerd: Som nerd fonts for icons and overall look
+# file-roller: archive manager
+# thunar-archive-plugin: archive actions inside Thunar
+# ttf-jetbrains-mono-nerd: Some nerd fonts for icons and overall look
 # noto-fonts-emoji: fonts needed by the weather script in the top bar
-# polkit-gnome: needed to get superuser access on some graphical appliaction
 # python-requests: needed for the weather module script to execute
 # starship: allows to customize the shell prompt
-# swappy: This is a screenshot editor tool
+# pipewire: audio server
+# wireplumber: PipeWire session manager
+# pipewire-pulse: PulseAudio compatibility layer used by Waybar audio modules
+# pavucontrol: graphical audio mixer for PipeWire/PulseAudio
+# satty: screenshot annotation tool
 # grim: This is a screenshot tool it grabs images from a Wayland compositor
 # slurp: This helps with screenshots, it selects a region in a Wayland compositor
-# pamixer: This helps with audio settings such as volume
+# wl-clipboard: command line clipboard tools for Wayland
+# cliphist: clipboard history manager
+# playerctl: media player control CLI
 # brightnessctl: used to control monitor bright level
+# xdg-utils: desktop helpers like xdg-open
+# xdg-user-dirs: standard XDG user directories
+# xdg-user-dirs-gtk: GUI manager for standard user directories
+# qt5-wayland: Qt 5 Wayland support
+# qt6-wayland: Qt 6 Wayland support
 # gvfs: adds missing functionality to thunar such as automount usb drives
+# gvfs-mtp: MTP device support in Thunar
+# udisks2: removable drive backend
+# udiskie: automount tray helper
+# network-manager-applet: tray applet and connection editor for NetworkManager
 # bluez: the bluetooth service
-# bluez-utils: command line utilities to interact with bluettoth devices
-# lxappearance: used to set GTK theme
-# xfce4-settings: set of tools for xfce, needed to set GTK theme
+# bluez-utils: command line utilities to interact with bluetooth devices
+# blueman: Bluetooth tray applet and manager
+# unzip: extract zip archives
+# zip: create zip archives
+# p7zip: 7z archive support
+# btop: system monitor
+# jq: JSON CLI
+# ripgrep: fast text search
+# fd: fast file finder
+# fzf: fuzzy finder
+# zoxide: smarter cd helper
+# nwg-look: GTK theme selector for Wayland desktops
+# tumbler: thumbnail service
+# ffmpegthumbnailer: video thumbnails
 # dracula-gtk-theme: the Dracula theme, it fits the overall look and feel
-# dracula-icons-git" set of icons to go with the Dracula theme
+# dracula-icons-git: set of icons to go with the Dracula theme
 # xdg-desktop-portal-hyprland: xdg-desktop-portal backend for hyprland
 
+PACKAGES=(
+    hyprland hyprmod kitty waybar
+    hyprpaper hyprlock hypridle hyprpolkitagent hyprsunset
+    fuzzel hyprshutdown swaync thunar file-roller thunar-archive-plugin
+    ttf-jetbrains-mono-nerd noto-fonts-emoji
+    python-requests starship
+    pipewire wireplumber pipewire-pulse
+    satty grim slurp pavucontrol
+    wl-clipboard cliphist playerctl brightnessctl
+    xdg-utils xdg-user-dirs xdg-user-dirs-gtk qt5-wayland qt6-wayland
+    gvfs gvfs-mtp udisks2 udiskie
+    network-manager-applet bluez bluez-utils blueman nwg-look
+    unzip zip p7zip
+    btop jq ripgrep fd fzf zoxide
+    tumbler ffmpegthumbnailer
+    dracula-gtk-theme dracula-icons-git xdg-desktop-portal-hyprland
+)
+
+ROG_PACKAGES=(
+    asusctl supergfxctl rog-control-center
+)
+
+CONFIG_DIRS=(
+    hypr kitty satty swaync waybar fuzzel
+)
+
+EXECUTABLE_FILES=(
+    "$HOME/.config/hypr/clipboard-menu.sh"
+    "$HOME/.config/hypr/power-menu.sh"
+    "$HOME/.config/waybar/scripts/waybar-wttr.py"
+)
+
+INSTALLED_PACKAGES=()
+ALREADY_PRESENT_PACKAGES=()
+FAILED_PACKAGES=()
+COMPLETED_STEPS=()
+FAILED_STEPS=()
+SUMMARY_NOTES=()
+
+append_unique() {
+    local array_name="$1"
+    local value="$2"
+    local -n array_ref="$array_name"
+    local existing
+
+    for existing in "${array_ref[@]}"; do
+        [[ "$existing" == "$value" ]] && return 0
+    done
+
+    array_ref+=("$value")
+}
+
+prompt_yes_no() {
+    local prompt="$1"
+    local reply
+
+    read -r -n1 -p "$prompt" reply
+    printf '\n'
+    [[ "$reply" == [Yy] ]]
+}
+
+record_step_result() {
+    local description="$1"
+    local status="$2"
+
+    if [[ "$status" == "done" ]]; then
+        append_unique COMPLETED_STEPS "$description"
+    else
+        append_unique FAILED_STEPS "$description"
+        printf 'Warning: %s failed.\n\n' "$description" >&2
+    fi
+}
+
+run_step() {
+    local description="$1"
+    shift
+
+    printf '%s...\n\n' "$description"
+    if "$@"; then
+        record_step_result "$description" "done"
+        return 0
+    fi
+
+    record_step_result "$description" "failed"
+    return 1
+}
+
+package_installed() {
+    pacman -Qq "$1" >/dev/null 2>&1
+}
+
+install_packages() {
+    local description="$1"
+    shift
+    local -a packages=("$@")
+    local -a missing_before=()
+    local package
+
+    for package in "${packages[@]}"; do
+        if package_installed "$package"; then
+            append_unique ALREADY_PRESENT_PACKAGES "$package"
+        else
+            missing_before+=("$package")
+        fi
+    done
+
+    printf '%s...\n\n' "$description"
+    if yay -S --needed --noconfirm "${packages[@]}"; then
+        record_step_result "$description" "done"
+    else
+        record_step_result "$description" "failed"
+    fi
+
+    for package in "${missing_before[@]}"; do
+        if package_installed "$package"; then
+            append_unique INSTALLED_PACKAGES "$package"
+        else
+            append_unique FAILED_PACKAGES "$package"
+        fi
+    done
+}
+
+remove_packages_if_installed() {
+    local description="$1"
+    shift
+    local -a installed_now=()
+    local package
+
+    for package in "$@"; do
+        if package_installed "$package"; then
+            installed_now+=("$package")
+        fi
+    done
+
+    if ((${#installed_now[@]} == 0)); then
+        append_unique SUMMARY_NOTES "$description: nothing to remove"
+        return 0
+    fi
+
+    run_step "$description" yay -R --noconfirm "${installed_now[@]}"
+}
+
+write_wifi_powersave_config() {
+    local config_path="/etc/NetworkManager/conf.d/wifi-powersave.conf"
+
+    if ! sudo install -d "$(dirname "$config_path")"; then
+        return 1
+    fi
+
+    if ! printf '[connection]\nwifi.powersave = 2\n' | sudo tee "$config_path" >/dev/null; then
+        return 1
+    fi
+
+    run_step "Restart NetworkManager service" sudo systemctl restart NetworkManager
+}
+
+copy_config_dirs() {
+    local dir
+    local success=0
+
+    mkdir -p "$HOME/.config" || return 1
+
+    for dir in "${CONFIG_DIRS[@]}"; do
+        if cp -R "$dir" "$HOME/.config/"; then
+            append_unique COMPLETED_STEPS "Copy $dir config"
+        else
+            append_unique FAILED_STEPS "Copy $dir config"
+            printf 'Warning: Copy %s config failed.\n\n' "$dir" >&2
+            success=1
+        fi
+    done
+
+    return "$success"
+}
+
+mark_executables() {
+    local file
+    local success=0
+
+    for file in "${EXECUTABLE_FILES[@]}"; do
+        if chmod +x "$file"; then
+            append_unique COMPLETED_STEPS "Mark $(basename "$file") executable"
+        else
+            append_unique FAILED_STEPS "Mark $(basename "$file") executable"
+            printf 'Warning: Mark %s executable failed.\n\n' "$file" >&2
+            success=1
+        fi
+    done
+
+    return "$success"
+}
+
+setup_starship() {
+    mkdir -p "$HOME/.config" || return 1
+
+    if [[ ! -f "$HOME/.bashrc" ]]; then
+        touch "$HOME/.bashrc" || return 1
+    fi
+
+    if ! grep -Fq 'eval "$(starship init bash)"' "$HOME/.bashrc"; then
+        printf '\neval "$(starship init bash)"\n' >> "$HOME/.bashrc" || return 1
+    else
+        append_unique SUMMARY_NOTES "Starship init already present in ~/.bashrc"
+    fi
+
+    cp starship.toml "$HOME/.config/" || return 1
+}
+
+ensure_g14_repo() {
+    local pacman_conf="/etc/pacman.conf"
+
+    if sudo grep -q '^\[g14\]' "$pacman_conf"; then
+        append_unique SUMMARY_NOTES "g14 repository already present in /etc/pacman.conf"
+        return 0
+    fi
+
+    printf '\n[g14]\nServer = https://arch.asus-linux.org\n' | sudo tee -a "$pacman_conf" >/dev/null
+}
+
+print_summary_section() {
+    local title="$1"
+    shift
+    local -a items=("$@")
+    local item
+
+    printf '%s (%d):\n' "$title" "${#items[@]}"
+    if ((${#items[@]} == 0)); then
+        printf '  - none\n\n'
+        return 0
+    fi
+
+    for item in "${items[@]}"; do
+        printf '  - %s\n' "$item"
+    done
+    printf '\n'
+}
+
+print_final_summary() {
+    printf '\n========== Final summary ==========\n\n'
+    print_summary_section "Installed packages" "${INSTALLED_PACKAGES[@]}"
+    print_summary_section "Already present packages" "${ALREADY_PRESENT_PACKAGES[@]}"
+    print_summary_section "Failed packages" "${FAILED_PACKAGES[@]}"
+    print_summary_section "Completed steps" "${COMPLETED_STEPS[@]}"
+    print_summary_section "Failed steps" "${FAILED_STEPS[@]}"
+    print_summary_section "Notes" "${SUMMARY_NOTES[@]}"
+}
+
 #### Check for yay ####
-ISYAY=/sbin/yay
-if [ -f "$ISYAY" ]; then 
-    echo -e "yay was located, moving on.\n"
-    yay -Suy
-else 
-    echo -e "yay was not located, please install yay. Exiting script.\n"
-    exit 
+if command -v yay >/dev/null 2>&1; then
+    printf 'yay was located, moving on.\n\n'
+    run_step "Update system package database" yay -Syu --noconfirm
+else
+    printf 'yay was not located, please install yay. Exiting script.\n' >&2
+    exit 1
 fi
 
 ### Disable wifi powersave mode ###
-read -n1 -rep 'Would you like to disable wifi powersave? (y,n)' WIFI
-if [[ $WIFI == "Y" || $WIFI == "y" ]]; then
-    LOC="/etc/NetworkManager/conf.d/wifi-powersave.conf"
-    echo -e "The following has been added to $LOC.\n"
-    echo -e "[connection]\nwifi.powersave = 2" | sudo tee -a $LOC
-    echo -e "\n"
-    echo -e "Restarting NetworkManager service...\n"
-    sudo systemctl restart NetworkManager
-    sleep 3
+if prompt_yes_no 'Would you like to disable wifi powersave? (y,n) '; then
+    run_step "Configure wifi powersave" write_wifi_powersave_config
+else
+    append_unique SUMMARY_NOTES "Skipped wifi powersave configuration"
 fi
 
-### Install all of the above pacakges ####
-read -n1 -rep 'Would you like to install the packages? (y,n)' INST
-if [[ $INST == "Y" || $INST == "y" ]]; then
-    yay -S --noconfirm hyprland kitty waybar \
-    swaybg swaylock-effects wofi wlogout mako thunar \
-    ttf-jetbrains-mono-nerd noto-fonts-emoji \
-    polkit-gnome python-requests starship \
-    swappy grim slurp pamixer brightnessctl gvfs \
-    bluez bluez-utils lxappearance xfce4-settings \
-    dracula-gtk-theme dracula-icons-git xdg-desktop-portal-hyprland
+### Install all of the above packages ###
+if prompt_yes_no 'Would you like to install the packages? (y,n) '; then
+    install_packages "Install desktop packages" "${PACKAGES[@]}"
 
-    # Start the bluetooth service
-    echo -e "Starting the Bluetooth Service...\n"
-    sudo systemctl enable --now bluetooth.service
-    sleep 2
-    
-    # Clean out other portals
-    echo -e "Cleaning out conflicting xdg portals...\n"
-    yay -R --noconfirm xdg-desktop-portal-gnome xdg-desktop-portal-gtk
+    run_step "Create XDG user directories" xdg-user-dirs-update
+    run_step "Enable Bluetooth service" sudo systemctl enable --now bluetooth.service
+    remove_packages_if_installed "Remove conflicting xdg portals" \
+        xdg-desktop-portal-gnome \
+        xdg-desktop-portal-gtk
+else
+    append_unique SUMMARY_NOTES "Skipped desktop package installation"
 fi
 
 ### Copy Config Files ###
-read -n1 -rep 'Would you like to copy config files? (y,n)' CFG
-if [[ $CFG == "Y" || $CFG == "y" ]]; then
-    echo -e "Copying config files...\n"
-    cp -R hypr ~/.config/
-    cp -R kitty ~/.config/
-    cp -R mako ~/.config/
-    cp -R waybar ~/.config/
-    cp -R swaylock ~/.config/
-    cp -R wofi ~/.config/
-    
-    # Set some files as exacutable 
-    chmod +x ~/.config/hypr/xdg-portal-hyprland
-    chmod +x ~/.config/waybar/scripts/waybar-wttr.py
+if prompt_yes_no 'Would you like to copy config files? (y,n) '; then
+    run_step "Copy config directories" copy_config_dirs
+    run_step "Mark helper files executable" mark_executables
+else
+    append_unique SUMMARY_NOTES "Skipped config copy"
 fi
 
-### Install teh starship shell ###
-read -n1 -rep 'Would you like to install the starship shell? (y,n)' STAR
-if [[ $STAR == "Y" || $STAR == "y" ]]; then
-    # install the starship shell
-    echo -e "Updating .bashrc...\n"
-    echo -e '\neval "$(starship init bash)"' >> ~/.bashrc
-    echo -e "copying starship config file to ~/.confg ...\n"
-    cp starship.toml ~/.config/
+### Install the starship shell ###
+if prompt_yes_no 'Would you like to install the starship shell? (y,n) '; then
+    run_step "Configure Starship shell" setup_starship
+else
+    append_unique SUMMARY_NOTES "Skipped Starship shell configuration"
 fi
 
 ### Install software for Asus ROG laptops ###
-read -n1 -rep 'Would you like to install Asus ROG software support? (y,n)' ROG
-if [[ $ROG == "Y" || $ROG == "y" ]]; then
-    echo -e "Adding Keys... \n"
-    sudo pacman-key --recv-keys 8F654886F17D497FEFE3DB448B15A6B0E9A3FA35
-    sudo pacman-key --finger 8F654886F17D497FEFE3DB448B15A6B0E9A3FA35
-    sudo pacman-key --lsign-key 8F654886F17D497FEFE3DB448B15A6B0E9A3FA35
-    sudo pacman-key --finger 8F654886F17D497FEFE3DB448B15A6B0E9A3FA35
-
-    LOC="/etc/pacman.conf"
-    echo -e "Updating $LOC with g14 repo.\n"
-    echo -e "\n[g14]\nServer = https://arch.asus-linux.org" | sudo tee -a $LOC
-    echo -e "\n"
-    echo -e "Update the system...\n"
-    sudo pacman -Suy
-
-    echo -e "Installing ROG pacakges...\n"
-    sudo pacman -S --noconfirm asusctl supergfxctl rog-control-center
-    echo -e "Activating ROG services...\n"
-    sudo systemctl enable --now power-profiles-daemon.service
-    sleep 2
-    sudo systemctl enable --now supergfxd
-    sleep 2
+if prompt_yes_no 'Would you like to install Asus ROG software support? (y,n) '; then
+    run_step "Receive ASUS Linux signing key" sudo pacman-key --recv-keys 8F654886F17D497FEFE3DB448B15A6B0E9A3FA35
+    run_step "Show ASUS Linux key fingerprint" sudo pacman-key --finger 8F654886F17D497FEFE3DB448B15A6B0E9A3FA35
+    run_step "Locally sign ASUS Linux key" sudo pacman-key --lsign-key 8F654886F17D497FEFE3DB448B15A6B0E9A3FA35
+    run_step "Ensure ASUS Linux pacman repository" ensure_g14_repo
+    run_step "Refresh pacman repositories" sudo pacman -Syu --noconfirm
+    install_packages "Install ASUS ROG packages" "${ROG_PACKAGES[@]}"
+    run_step "Enable power-profiles-daemon service" sudo systemctl enable --now power-profiles-daemon.service
+    run_step "Enable supergfxd service" sudo systemctl enable --now supergfxd
+else
+    append_unique SUMMARY_NOTES "Skipped ASUS ROG setup"
 fi
 
-### Script is done ###
-echo -e "Script had completed.\n"
-echo -e "You can start Hyprland by typing Hyprland (note the capital H).\n"
-read -n1 -rep 'Would you like to start Hyprland now? (y,n)' HYP
-if [[ $HYP == "Y" || $HYP == "y" ]]; then
+print_final_summary
+
+printf 'Script has completed.\n'
+printf 'You can start Hyprland by typing Hyprland (note the capital H).\n'
+
+if prompt_yes_no 'Would you like to start Hyprland now? (y,n) '; then
     exec Hyprland
-else
-    exit
 fi

@@ -1,0 +1,25 @@
+[general]
+fullscreen = true
+floating-hack = true
+early-exit = true
+corner-roundness = 10
+copy-command = "wl-copy"
+actions-on-enter = ["save-to-clipboard", "exit"]
+actions-on-escape = ["exit"]
+save-after-copy = false
+default-hide-toolbars = false
+no-window-decoration = true
+
+[font]
+family = "JetBrainsMono Nerd Font"
+style = "Regular"
+
+[color-palette]
+palette = [
+    "#89b4fa",
+    "#94e2d5",
+    "#f9e2af",
+    "#f38ba8",
+    "#cba6f7",
+    "#a6e3a1",
+]

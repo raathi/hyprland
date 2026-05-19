@@ -1,0 +1,68 @@
+* {
+  font-family: "JetBrainsMono Nerd Font";
+  font-size: 14px;
+}
+
+.control-center {
+  background: #1e1e2e;
+  border: 1px solid #181825;
+  border-radius: 16px;
+  color: #cdd6f4;
+}
+
+.control-center .notification-row .notification-background,
+.floating-notifications .notification-row .notification-background {
+  background: #11111b;
+  border: 1px solid #181825;
+  border-radius: 14px;
+  margin: 6px 10px;
+}
+
+.control-center .notification-row .notification-background .notification,
+.floating-notifications .notification-row .notification-background .notification {
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+
+.widget-title,
+.widget-dnd,
+.widget-mpris,
+.widget-volume,
+.widget-backlight {
+  background: #11111b;
+  border-radius: 12px;
+  margin: 10px 10px 0;
+  padding: 10px 12px;
+}
+
+.widget-title button,
+.widget-dnd button,
+.widget-mpris button,
+.widget-volume button,
+.widget-backlight button,
+button {
+  background: #313244;
+  border: none;
+  border-radius: 10px;
+  color: #cdd6f4;
+  box-shadow: none;
+}
+
+button:hover {
+  background: #45475a;
+}
+
+scale trough {
+  background: #313244;
+  border-radius: 999px;
+  min-height: 8px;
+}
+
+scale highlight {
+  background: #89b4fa;
+  border-radius: 999px;
+}
+
+.widget-dnd switch slider {
+  background: #cba6f7;
+}

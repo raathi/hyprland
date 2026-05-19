@@ -49,11 +49,13 @@ tooltip {
 }
 
 #custom-power_profile,
+#custom-calendar,
 #custom-weather,
 #window,
 #clock,
 #battery,
 #pulseaudio,
+#custom-notification,
 #network,
 #bluetooth,
 #temperature,
@@ -112,6 +114,12 @@ tooltip {
     border-right: 0px;
 }
 
+#custom-calendar {
+    color: #f5c2e7;
+    border-left: 0px;
+    border-right: 0px;
+}
+
 #network {
     color: #f9e2af;
     border-radius: 10px 0px 0px 10px;
@@ -135,6 +143,17 @@ tooltip {
     color: #cba6f7;
     border-left: 0px;
     border-right: 0px;
+}
+
+#custom-notification {
+    color: #94e2d5;
+    border-left: 0px;
+    border-right: 0px;
+    border-radius: 0px 10px 10px 0px;
+    margin-right: 10px;
+}
+
+#tray {
     border-radius: 0px 10px 10px 0px;
     margin-right: 10px;
 }
@@ -148,6 +167,7 @@ tooltip {
 
 #custom-weather {
     border-radius: 0px 10px 10px 0px;
+    border-left: 0px;
     border-right: 0px;
     margin-left: 0px;
 }
