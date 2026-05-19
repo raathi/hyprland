@@ -25,6 +25,10 @@
       tumbler ffmpegthumbnailer \
       dracula-gtk-theme dracula-icons-git xdg-desktop-portal-hyprland
   ```
+- Shell-script linting for repository scripts should use:
+  ```bash
+  shellcheck set-hypr hypr/*.sh
+  ```
 - There is no automated build, lint, or test suite in this repository. The only standalone executable checked into the repo is the Waybar weather helper, which can be smoke-tested directly:
   ```bash
   python waybar/scripts/waybar-wttr.py

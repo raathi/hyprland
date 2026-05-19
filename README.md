@@ -46,4 +46,4 @@ Networking and Bluetooth applets are handled by `nm-applet --indicator` and `blu
 
 Screenshots use `grim` + `slurp` + `satty`, so region capture opens directly into Satty for annotation.
 
-The utility stack also includes `pavucontrol`, `wl-clipboard`, `cliphist`, `playerctl`, `xdg-utils`, `xdg-user-dirs`, `xdg-user-dirs-gtk`, `udiskie`, `gvfs-mtp`, `file-roller`, `thunar-archive-plugin`, `unzip`, `zip`, `p7zip`, `tumbler`, `ffmpegthumbnailer`, `btop`, `jq`, `ripgrep`, `fd`, `fzf`, and `zoxide` for desktop integration, archives, thumbnails, and terminal quality-of-life.
+The utility stack also includes `pavucontrol`, `wl-clipboard`, `cliphist`, `playerctl`, `xdg-utils`, `xdg-user-dirs`, `xdg-user-dirs-gtk`, `udiskie`, `gvfs-mtp`, `file-roller`, `thunar-archive-plugin`, `unzip`, `zip`, `p7zip`, `tumbler`, `ffmpegthumbnailer`, `btop`, `jq`, `ripgrep`, `fd`, and `fzf` for desktop integration, archives, thumbnails, and terminal quality-of-life.
